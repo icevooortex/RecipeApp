@@ -8,7 +8,7 @@ import ru.sorokin.recipeapp.adapter.MainCategoryAdapter
 import ru.sorokin.recipeapp.adapter.SubCategoryAdapter
 import ru.sorokin.recipeapp.entities.Recipes
 
-class HomeActivity : AppCompatActivity() {
+class HomeActivity : BaseActivity() {
     var arrMainCategory = ArrayList<Recipes>()
     var arrSubCategory = ArrayList<Recipes>()
 
