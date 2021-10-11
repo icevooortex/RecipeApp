@@ -1,23 +1,28 @@
 package ru.sorokin.recipeapp
 
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
 import kotlinx.android.synthetic.main.activity_splash.*
+import kotlinx.coroutines.launch
+import pub.devrel.easypermissions.AppSettingsDialog
+import pub.devrel.easypermissions.EasyPermissions
 import retrofit2.Call
 import retrofit2.Response
 import ru.sorokin.recipeapp.entities.Category
-import ru.sorokin.recipeapp.entities.CategoryItems
 import ru.sorokin.recipeapp.interfaces.GetDataService
 import ru.sorokin.recipeapp.retrofitclient.RetrofitClientInstance
 import retrofit2.Callback
+import ru.sorokin.recipeapp.database.RecipeDatabase
 
-class SplashActivity : BaseActivity() {
+class SplashActivity : BaseActivity(), EasyPermissions.RationaleCallbacks, EasyPermissions.PermissionCallbacks {
+    private var READ_STORAGE_PERM = 123
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_splash)
+
+        readStorageTask()
 
         btnGetStarted.setOnClickListener {
             var intent = Intent(this@SplashActivity,HomeActivity::class.java)
@@ -26,11 +31,11 @@ class SplashActivity : BaseActivity() {
         }
     }
 
-    fun getCategories(){
-        val service = RetrofitClientInstance.retrofitInstance.create(GetDataService::class.java)
+    fun getCategories() {
+        val service = RetrofitClientInstance.retrofitInstance!!.create(GetDataService::class.java)
         val call = service.getCategoryList()
-        call.enqueue(object : Callback<CategoryItems> {
-            override fun onFailure(call: Call<CategoryItems>, t: Throwable) {
+        call.enqueue(object : Callback<Category> {
+            override fun onFailure(call: Call<Category>, t: Throwable) {
 
                 loader.visibility = View.INVISIBLE
                 Toast.makeText(this@SplashActivity, "Something went wrong", Toast.LENGTH_SHORT)
@@ -38,17 +43,74 @@ class SplashActivity : BaseActivity() {
             }
 
             override fun onResponse(
-                call: Call<CategoryItems>,
-                response: Response<CategoryItems>
+                call: Call<Category>,
+                response: Response<Category>
             ) {
 
-                //insertDataIntoRoomDb(response.body())
+                insertDataIntoRoomDb(response.body())
             }
 
         })
     }
 
-    fun insertDataIntoRoomDb(category: List<Category>?){
+    fun insertDataIntoRoomDb(category: Category?) {
 
+        launch {
+            this.let {
+
+                for (arr in category!!.categorieitems!!) {
+                    RecipeDatabase.getDatabase(this@SplashActivity)
+                        .recipeDao().insertCategory(arr)
+                }
+
+                btnGetStarted.visibility = View.VISIBLE
+            }
+        }
+
+
+    }
+
+    private fun hasReadStoragePermission():Boolean{
+        return EasyPermissions.hasPermissions(this, android.Manifest.permission.READ_EXTERNAL_STORAGE)
+    }
+
+    private fun readStorageTask(){
+        if (hasReadStoragePermission()){
+        getCategories()
+        }else{
+            EasyPermissions.requestPermissions(
+                this,
+                "This app needs access to your storage,",
+                READ_STORAGE_PERM,
+                android.Manifest.permission.READ_EXTERNAL_STORAGE
+            )
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        EasyPermissions.onRequestPermissionsResult(requestCode, permissions, grantResults, this)
+    }
+
+    override fun onRationaleAccepted(requestCode: Int) {
+
+    }
+
+    override fun onRationaleDenied(requestCode: Int) {
+
+    }
+
+    override fun onPermissionsGranted(requestCode: Int, perms: MutableList<String>) {
+
+    }
+
+    override fun onPermissionsDenied(requestCode: Int, perms: MutableList<String>) {
+        if (EasyPermissions.somePermissionPermanentlyDenied(this, perms)){
+            AppSettingsDialog.Builder(this).build().show()
+        }
     }
 }

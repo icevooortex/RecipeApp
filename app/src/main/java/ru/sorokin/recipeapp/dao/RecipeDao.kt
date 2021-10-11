@@ -5,7 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import ru.sorokin.recipeapp.entities.Category
-import ru.sorokin.recipeapp.entities.Recipes
+import ru.sorokin.recipeapp.entities.CategoryItems
 
 @Dao
 interface RecipeDao {
@@ -14,5 +14,8 @@ interface RecipeDao {
     val getAllCategory: List<Category>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insertCategory(category: Category)
+    fun insertCategory(category: CategoryItems)
+
+    @Query("DELETE FROM categoryitems")
+    suspend fun clearDb()
 }
